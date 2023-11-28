@@ -16,7 +16,7 @@
   });
   </script>
 
-<style>
+<style scoped>
 
 .card {
     width:310px;
@@ -39,4 +39,5 @@
 .card .card-text h2 {
     font-weight: bold;
 }
+
 </style>
