@@ -31,11 +31,9 @@
     height: 190px;
     margin: 0;
 }
-
 .card text {
     padding: 0 5px;
 }
-
 .card .card-text h2 {
     font-weight: bold;
 }
