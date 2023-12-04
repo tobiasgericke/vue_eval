@@ -17,14 +17,23 @@ watch(searchTerm, () => {
 
 <template>
   <div>
-    <h2>Type your search here</h2>
-    <input v-on:keyup.enter="emitSearchTermUpdated" v-model="searchTerm" type="text" placeholder="Search...">
+    <input class="search" v-on:keyup.enter="emitSearchTermUpdated" v-model="searchTerm" type="text" placeholder="Search...">
   </div>
 </template>
 
 <style scoped>
 
-/*CARD*/
 
+.search {
+  height: 46px;
+    border-radius: 48px;
+    border: 0.5px solid lightgrey;
+    width: 40%;
+    padding-right: 40px;
+    padding-left: 10px;
+    position: fixed;
+    left: 50%;
+    transform: translate(-50%);
+  }
 
 </style>
