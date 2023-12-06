@@ -25,15 +25,16 @@ watch(searchTerm, () => {
 
 
 .search {
+  margin-top: 1%;
   height: 46px;
-    border-radius: 48px;
-    border: 0.5px solid lightgrey;
-    width: 40%;
-    padding-right: 40px;
-    padding-left: 10px;
-    position: fixed;
-    left: 50%;
-    transform: translate(-50%);
-  }
+  border-radius: 48px;
+  border: 0.5px solid lightgrey;
+  width: 40%;
+  padding-right: 40px;
+  padding-left: 10px;
+  position: fixed;
+  left: 50%;
+  transform: translate(-50%);
+}
 
 </style>

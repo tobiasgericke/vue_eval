@@ -17,10 +17,9 @@ const updateCurrentSearchTerm = (newSearchTerm) => {
 const fetchData = async (searchTerm) => {
   try {
     const responseEmbedding = await fetch(
-    `http://localhost:4444/search?projectId=17478&site=28`+
-    `&includeContent=true&limit=30&filterOptions=true&offset=0`+
-    `&sessionId=3c079d5d-10da-db67-7f40-606258fc2ccf&kvtable=false`+
-    `&complexFilterFormat=true&query=${searchTerm}`
+    `http://localhost:4444/search-vector?projectId=13364`+
+    `&site=13364&limit=30&filterOptions=true`+
+    `&offset=0&complexFilterFormat=true&query=${searchTerm}`
     );
     queryResultsEmbedding.value = await responseEmbedding.json();
     console.log(`Debug: queryResultsEmbedding.value`, queryResultsEmbedding.value)
@@ -45,22 +44,30 @@ const processedQueryResultsEmbedding = computed(() => {
     const data = queryResultsEmbedding.value.searchResults?.[0]?.results.map(group => group.map(product => ({
     name: product.name,
     image: product.image
-  }))).flat() || [];
+  })))
+  .flat()
+  //.filter(product => product.image)
+  .slice(0, 10) || [];
+
   console.log(data);
 
   return data;
-//   queryResultsEmbedding.value.searchResults?.[0]?.results.map(group => group.map(product => ({
-//     name: product.name,
-//     image: product.image
-//   }))).flat() || [];
 });
 
 const processedQueryResultsOntology = computed(() => {
-  return queryResultsOntology.value.searchResults?.[0]?.results.map(group => group.map(product => ({
+  const data = queryResultsOntology.value.searchResults?.[0]?.results.map(group => group.map(product => ({
     name: product.name,
     image: product.image
-  }))).flat() || [];
+  })))
+  .flat()
+  //.filter(product => product.image)
+  .slice(0, 10) || [];
+
+  console.log(data);
+
+  return data;
 });
+
 
 // Überwache currentSearchTerm um immer neue Daten zu fetchen
 watch(currentSearchTerm, (newValue) => {
@@ -75,20 +82,25 @@ watch(currentSearchTerm, (newValue) => {
 <template>
     <SearchBar @searchTermUpdated="updateCurrentSearchTerm"/>
     <div class="results-container">
-      <QueryResult class="result" :results="processedQueryResultsEmbedding" />
-      <QueryResult class="result" :results="processedQueryResultsOntology" />
+      <QueryResult class="results" :results="processedQueryResultsEmbedding" />
+      <div class="divider"></div> <!-- Füge einen Trennstrich zwischen den QueryResult-Komponenten hinzu -->
+      <QueryResult class="results" :results="processedQueryResultsOntology" />
     </div>
 </template>
 
 <style scoped>
+
+/* Macht das SearchWindow zu einem Flex Container, spaced evenly */
 .results-container {
   display: flex;
-  justify-content: space-around;
+  flex-wrap: wrap;
+  justify-content: space-around; /* Ändere space-around zu space-between oder space-evenly, je nachdem, welchen Abstand du bevorzugst */
 }
 
-/* Hier den Stil jeder QueryResult-Komponente anpassen */
-.result {
-  flex: 1; /* Sorgt dafür, dass jede Komponente gleichen Platz einnimmt */
-  margin: 0 10px; /* Fügt einen Außenabstand zwischen den Komponenten hinzu */
+.results {
+  flex: 1 1 300px; /* Ändere die Breite der Karten nach Bedarf */
+  margin: 10px; /* Ändere den Abstand zwischen den Karten nach Bedarf */
+  margin-top: 3%;
 }
+
 </style>
