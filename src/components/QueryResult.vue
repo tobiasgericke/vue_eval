@@ -8,7 +8,7 @@
         :image="product.image"
       />
     </div>
-    <button v-if="results && results.length > 0" class="center-button">This one is better</button>
+    <button v-if="results && results.length > 0" class="center-button" v-on:click="">This one is better</button>
   </div>
 
 </template>

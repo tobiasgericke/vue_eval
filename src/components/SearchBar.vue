@@ -17,7 +17,7 @@ watch(searchTerm, () => {
 
 <template>
   <div>
-    <input class="search" v-on:keyup.enter="emitSearchTermUpdated" v-model="searchTerm" type="text" placeholder="Search...">
+    <input class="search" v-on:keyup.enter="emitSearchTermUpdated" v-model="searchTerm" type="text" placeholder="Start the survey, by pressing the button!">
   </div>
 </template>
 
