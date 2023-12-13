@@ -337,7 +337,7 @@ const fetchOntologyData = async (searchTerm) => {
   }
 
 
-  /* Macht das SearchWindow zu einem Flex Container, spaced evenly */
+  /* Result Container */
   .results-container {
     display: flex;
     flex-wrap: wrap;
@@ -351,7 +351,7 @@ const fetchOntologyData = async (searchTerm) => {
   }
 
   /* Preferency-Buttons */
-  .left-button .right-button {
+  .left-button {
     flex: 1;
     display: inline-block;
     padding: 10px 20px;
@@ -376,7 +376,7 @@ const fetchOntologyData = async (searchTerm) => {
 
   .queries-container {
   display: flex;
-  flex-direction: column;
+  
   width: 50%; /* Ändere dies entsprechend deiner Anforderungen */
 }
 </style>
