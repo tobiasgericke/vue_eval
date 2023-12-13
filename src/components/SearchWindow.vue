@@ -2,12 +2,13 @@
   import SearchBar from '@/components/SearchBar.vue'
   import QueryResult from '@/components/QueryResult.vue'
   import {ref, watch, computed} from 'vue'
+  import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+  import { db } from '@/firebase.js';
 
-  //const currentSearchTerm = ref("");
   const queryResultsEmbedding = ref([]);
   const queryResultsOntology = ref([]);
-  const preferences  = ref([]);
   const isEmbeddingFirst = ref(true);
+  const currentPreferency  = ref('');
 
   const searchQueries = [
     /* Häufigste Querys */["neumann_bundles", "eris-2nd-gen", "kawai digital pianos", "shure-wireless", "e25-elektron", "teenage engineering", "akai", "fender", "komplete-14" , "behringer"],
@@ -23,49 +24,40 @@
 
   const handlePreference = (direction) => {
     // Hier fügst du die gedrückte Richtung für die aktuelle Query und das aktuelle Set zum Array hinzu
-    preferences.value[currentSearchSetIndex] = preferences.value[currentSearchSetIndex] || {};
-    preferences.value[currentSearchSetIndex][currentSearchIndex] = direction;
-    console.log("preferences:", preferences.value)
     console.log("handlePreference:", direction)
+    console.log ("isEmbeddingFirst:", isEmbeddingFirst.value)
+    if (isEmbeddingFirst.value === true && direction === "left") {
+      currentPreferency.value = "embedding"
+    } 
+    if (isEmbeddingFirst.value === true && direction === "right") {
+      currentPreferency.value = "ontology"
+    }
+    if (isEmbeddingFirst.value === false && direction === "left") {
+      currentPreferency.value = "ontology"
+    }
+    if (isEmbeddingFirst.value === false && direction === "right") {
+      currentPreferency.value = "embedding"
+    }
+    else {
+      console.log("Na toll")
+    }
+
+    console.log("currentPreferency:", currentPreferency.value)
+    writeSurveyDataToFirestore();
   };
 
   //API Calls Speichern in jeweilige Variable
-  // const fetchData = async (searchTerm) => {
-  //   try {
-  //     const responseEmbedding = await fetch(
-  //       `http://localhost:4444/search-vector?projectId=13364`+
-  //       `&site=13364&limit=30&filterOptions=true`+
-  //       `&offset=0&complexFilterFormat=true&query=${searchTerm}`
-  //     );
-  //     queryResultsEmbedding.value = await responseEmbedding.json();
-  //     console.log(`Debug: queryResultsEmbedding.value`, queryResultsEmbedding.value)
-
-  //     const responseOntology = await fetch(
-  //       `https://ecom.sitesearch360.com/search?projectId=28` +
-  //       `&site=28&includeContent=true&limit=30&highlightQueryTerms=true` +
-  //       `&includeContentGroups=%5B%22Produkte%22%5D&log=true&filterOptions=true` +
-  //       `&offset=0&catalogId=13705&ignoreMappings=true` +
-  //       `&sessionId=3c079d5d-10da-db67-7f40-606258fc2ccf&kvtable=false` +
-  //       `&complexFilterFormat=true&query=${searchTerm}`
-  //     );
-
-  //     queryResultsOntology.value = await responseOntology.json();
-  //     console.log(`Debug: queryResultsOntology.value`, queryResultsOntology.value)
-  //   } catch (error) {
-  //     console.error('Error fetching data:', error);
-  //   }
-
-  //   //Embedding Ramdomize
-  //   updateEmbeddingFirst();
-  //   console.log("isEmbeddingFirst:", isEmbeddingFirst.value)
-  // };
-
   const fetchEmbeddingData = async (searchTerm) => {
   try {
+    // OLD LOCAL FETCH
+    // const response = await fetch(
+    //   `http://localhost:4444/search-vector?projectId=13364` +
+    //   `&site=13364&limit=30&filterOptions=true` +
+    //   `&offset=0&complexFilterFormat=true&query=${searchTerm}`
+    // );
+
     const response = await fetch(
-      `http://localhost:4444/search-vector?projectId=13364` +
-      `&site=13364&limit=30&filterOptions=true` +
-      `&offset=0&complexFilterFormat=true&query=${searchTerm}`
+      `https://dev-api-v3.semknox.com/search-vector?projectId=32979&internal=true&log=false&query=${searchTerm}`
     );
 
     if (!response.ok) {
@@ -185,16 +177,30 @@ const fetchOntologyData = async (searchTerm) => {
 
   const writeSurveyDataToFirestore = async () => {
     try {
-      const data = {
-        // Hier kommen die Daten, die du in Firestore speichern möchtest
-        field1: currentSearchTerm,
-        field2: currentPreferency,
+      // Erstelle eine Referenz zur 'sessions'-Sammlung
+      const sessionRef = collection(db, 'default');
 
-        // ...
+      // Füge ein neues Dokument mit automatisch generierter ID hinzu
+      const sessionDocRef = await addDoc(sessionRef, {
+        creator: userName.value,
+        createdAt: serverTimestamp(),
+      });
+
+      // Erstelle eine Referenz zur Nutzer-Subkollektion innerhalb des Session-Dokuments
+      const userRef = collection(sessionDocRef, userName);
+      console.log(currentSearchTerm.value)
+      // Daten, die in Firestore geschrieben werden sollen
+      const data = {
+        userPreferences: {
+          [currentSearchTerm.value]: currentPreferency.value,
+        },
       };
 
       // Schreibe Daten in Firestore
-      await addDoc(collection(db, 'deineFirestoreCollection'), data);
+      await addDoc(userRef, data);
+
+      // // Schreibe Daten in Firestore
+      // await addDoc(collection(db, 'default'), data);
 
       console.log('Daten erfolgreich in Firestore geschrieben!', data);
     } catch (error) {
@@ -212,18 +218,16 @@ const fetchOntologyData = async (searchTerm) => {
 
   // Überwache currentSearchTerm um immer neue Daten zu fetchen
   watch(currentSearchTerm, (newValue) => {
-    //fetchData(newValue);
     fetchEmbeddingData(newValue);
     fetchOntologyData(newValue);
     updateEmbeddingFirst();
     console.log("currentSearchTerm updated:", currentSearchTerm.value)
   });
 
-  // Überwache currentPreferency um neue Ergebnisse in DB zu schreiben
-  // watch(currentPreferency, () => {
-  //   //writeSurveyDataToFirestore
-  //   console.log("currentSearchTerm updated:", currentPreferency.value)
-  // });
+  //Überwache currentPreferency um neue Ergebnisse in DB zu schreiben
+  watch(currentPreferency, () => {
+    console.log("currentPreferency updated:", currentPreferency.value)
+  });
 </script>
 
 <template>
@@ -273,7 +277,7 @@ const fetchOntologyData = async (searchTerm) => {
   }
 
   .popup-content {
-    background: white;
+    background: rgb(31, 31, 31);
     padding: 20px;
     border-radius: 8px;
     text-align: center;
@@ -351,7 +355,7 @@ const fetchOntologyData = async (searchTerm) => {
   }
 
   /* Preferency-Buttons */
-  .left-button .right-button {
+  .left-button, .right-button {
     flex: 1;
     display: inline-block;
     padding: 10px 20px;
@@ -367,7 +371,7 @@ const fetchOntologyData = async (searchTerm) => {
   }
 
   /* Hover-Effekte für den Button */
-  .center-button:hover {
+  .left-button:hover, .right-button:hover {
     background-color: #3498db; /* Hintergrundfarbe bei Hover */
     color: #fff; /* Textfarbe bei Hover */
     border-color: #3498db; /* Rahmenfarbe bei Hover */
