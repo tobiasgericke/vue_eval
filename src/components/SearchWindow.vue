@@ -2,8 +2,10 @@
   import SearchBar from '@/components/SearchBar.vue'
   import QueryResult from '@/components/QueryResult.vue'
   import {ref, watch, computed} from 'vue'
-  import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+  import { addDoc, collection, serverTimestamp, setDoc, doc } from 'firebase/firestore';
   import { db } from '@/firebase.js';
+
+  const currentSessionRef = ref(null);
 
   const queryResultsEmbedding = ref([]);
   const queryResultsOntology = ref([]);
@@ -18,32 +20,58 @@
   const currentSearchIndex = ref(0);
   const currentSearchSetIndex = ref(0);
   const currentSearchTerm = ref(searchQueries[currentSearchSetIndex.value][currentSearchIndex.value]);
+ 
+  //Progress Bar Stuff
+  const currentProgressIndex = ref(0);
+  const progressArray = ref(searchQueries.map(() => false));
+  const totalSearchTerms = ref(searchQueries[0].length * searchQueries.length)
+  const progressBarWidth = computed(() => {
+  const totalSearchTerms = searchQueries.length;
+  const completedTerms = progressArray.value.filter(Boolean).length;
+    return `${(100 * completedTerms / totalSearchTerms).toFixed(2)}%`;
+  });
+  const updateProgress = () => {
+    currentProgressIndex.value++;
+  };
 
   const showPopup = ref(true);
   const userName = ref('');
+
+  const startSurvey = async () => {
+    try {
+      // Erstelle ein neues Dokument in der 'sessions'-Sammlung mit dem Namen des Nutzers und dem aktuellen Zeitstempel
+      const sessionDocRef = await addDoc(collection(db, 'sessions'), {
+        userName: userName.value,
+        createdAt: serverTimestamp()
+      });
+      
+      // Speichere die erstellte Session-ID in der reaktiven Referenz
+      currentSessionRef.value = sessionDocRef.id;
+    } catch (error) {
+      console.error('Fehler beim Starten einer neuen Umfragesitzung in Firestore:', error);
+    }
+  };
 
   const handlePreference = (direction) => {
     // Hier fügst du die gedrückte Richtung für die aktuelle Query und das aktuelle Set zum Array hinzu
     console.log("handlePreference:", direction)
     console.log ("isEmbeddingFirst:", isEmbeddingFirst.value)
-    if (isEmbeddingFirst.value === true && direction === "left") {
-      currentPreferency.value = "embedding"
-    } 
-    if (isEmbeddingFirst.value === true && direction === "right") {
-      currentPreferency.value = "ontology"
-    }
-    if (isEmbeddingFirst.value === false && direction === "left") {
-      currentPreferency.value = "ontology"
-    }
-    if (isEmbeddingFirst.value === false && direction === "right") {
-      currentPreferency.value = "embedding"
-    }
-    else {
-      console.log("Na toll")
+    if ((isEmbeddingFirst.value && direction === "left") || (!isEmbeddingFirst.value && direction === "right")) {
+      currentPreferency.value = "embedding";
+    } else {
+      currentPreferency.value = "ontology";
     }
 
     console.log("currentPreferency:", currentPreferency.value)
-    writeSurveyDataToFirestore();
+    writeSurveyDataToFirestore(currentSearchTerm.value, currentPreferency.value);
+
+    // Fortschrittsarray aktualisieren
+    progressArray.value[currentProgressIndex.value] = true;
+    
+    // Optionale Weiterverarbeitung...
+
+    // Fortschritt aktualisieren
+    updateProgress();
   };
 
   //API Calls Speichern in jeweilige Variable
@@ -143,68 +171,104 @@ const fetchOntologyData = async (searchTerm) => {
     console.log("isEmbeddingFirst:", isEmbeddingFirst.value)
   };
 
+
   const nextSearch = () => {
-    // Durchscrollen zum nächsten Suchwort
-    const hasNextSearch = currentSearchSetIndex.value < searchQueries.length - 1 || currentSearchIndex.value < searchQueries[currentSearchSetIndex.value].length - 1;
+    // Ermitteln, ob es einen nächsten Suchbegriff gibt
+    const hasNextSearch = currentSearchIndex.value < searchQueries[0].length - 1 || currentSearchSetIndex.value < searchQueries.length - 1;
 
     if (hasNextSearch) {
-      currentSearchIndex.value = (currentSearchIndex.value + 1) % searchQueries[currentSearchSetIndex.value].length;
+      // Zum nächsten Set wechseln (vertikales Scrollen)
+      currentSearchSetIndex.value = (currentSearchSetIndex.value + 1) % searchQueries.length;
 
-      // Wenn alle Suchwörter im aktuellen Set durchlaufen wurden, zum nächsten Set wechseln
-      if (currentSearchIndex.value === 0) {
-        currentSearchSetIndex.value = (currentSearchSetIndex.value + 1) % searchQueries.length;
+      // Wenn alle Sets für den aktuellen Suchindex durchlaufen wurden, zum nächsten Suchindex wechseln
+      if (currentSearchSetIndex.value === 0) {
+        currentSearchIndex.value = (currentSearchIndex.value + 1) % searchQueries[0].length;
       }
 
+      // Aktuelles Suchwort aktualisieren
       currentSearchTerm.value = searchQueries[currentSearchSetIndex.value][currentSearchIndex.value];
+    } else {
+      // Wenn hasNextSearch false ist, sind wir am Ende und müssen eventuell einen speziellen Fall handhaben.
+      // Dieses else könnte entfernt werden, wenn es nichts zu tun gibt, sobald alle Suchbegriffe durchlaufen wurden.
     }
+
+    //ACHTUNG
+    updateProgress();
   };
 
   const previousSearch = () => {
-    // Rückwärts scrollen zum vorherigen Suchwort
+    // Ermitteln, ob es einen vorherigen Suchbegriff gibt
     const hasPreviousSearch = currentSearchSetIndex.value > 0 || currentSearchIndex.value > 0;
 
     if (hasPreviousSearch) {
-      currentSearchIndex.value = (currentSearchIndex.value - 1 + searchQueries[currentSearchSetIndex.value].length) % searchQueries[currentSearchSetIndex.value].length;
+      // Dekrementieren des Set-Index, um das vorherige Element vertikal zu erreichen
+      currentSearchSetIndex.value = (currentSearchSetIndex.value - 1 + searchQueries.length) % searchQueries.length;
 
-      // Wenn alle Suchwörter im aktuellen Set rückwärts durchlaufen wurden, zum vorherigen Set wechseln
-      if (currentSearchIndex.value === searchQueries[currentSearchSetIndex.value].length - 1) {
-        currentSearchSetIndex.value = (currentSearchSetIndex.value - 1 + searchQueries.length) % searchQueries.length;
+      // Wenn das erste Set im aktuellen Suchindex erreicht wurde, den Suchindex dekrementieren
+      if (currentSearchSetIndex.value === searchQueries.length - 1) {
+        currentSearchIndex.value = (currentSearchIndex.value - 1 + searchQueries[0].length) % searchQueries[0].length;
       }
 
+      // Aktuelles Suchwort aktualisieren
       currentSearchTerm.value = searchQueries[currentSearchSetIndex.value][currentSearchIndex.value];
     }
   };
 
-  const writeSurveyDataToFirestore = async () => {
+  // const writeSurveyDataToFirestore = async () => {
+  //   try {
+  //     // Erstelle eine Referenz zur 'sessions'-Sammlung
+  //     const sessionRef = collection(db, 'default');
+
+  //     // Füge ein neues Dokument mit automatisch generierter ID hinzu
+  //     const sessionDocRef = await addDoc(sessionRef, {
+  //       creator: userName.value,
+  //       createdAt: serverTimestamp(),
+  //     });
+
+  //     // Erstelle eine Referenz zur Nutzer-Subkollektion innerhalb des Session-Dokuments
+  //     const userRef = collection(sessionDocRef, userName);
+  //     console.log(currentSearchTerm.value)
+  //     // Daten, die in Firestore geschrieben werden sollen
+  //     const data = {
+  //       userPreferences: {
+  //         [currentSearchTerm.value]: currentPreferency.value,
+  //       },
+  //     };
+
+  //     // Schreibe Daten in Firestore
+  //     await addDoc(userRef, data);
+
+  //     // // Schreibe Daten in Firestore
+  //     // await addDoc(collection(db, 'default'), data);
+
+  //     console.log('Daten erfolgreich in Firestore geschrieben!', data);
+  //   } catch (error) {
+  //     console.error('Fehler beim Schreiben in Firestore:', error);
+  //   }
+  // };
+
+  const writeSurveyDataToFirestore = async (searchTerm, preferency) => {
+    if (!currentSessionRef.value) {
+      console.error('Es gibt keine aktive Umfragesitzung.');
+      return;
+    }
+
     try {
-      // Erstelle eine Referenz zur 'sessions'-Sammlung
-      const sessionRef = collection(db, 'default');
+      const sessionDocRef = doc(db, 'sessions', currentSessionRef.value);
 
-      // Füge ein neues Dokument mit automatisch generierter ID hinzu
-      const sessionDocRef = await addDoc(sessionRef, {
-        creator: userName.value,
-        createdAt: serverTimestamp(),
-      });
-
-      // Erstelle eine Referenz zur Nutzer-Subkollektion innerhalb des Session-Dokuments
-      const userRef = collection(sessionDocRef, userName);
-      console.log(currentSearchTerm.value)
       // Daten, die in Firestore geschrieben werden sollen
       const data = {
-        userPreferences: {
-          [currentSearchTerm.value]: currentPreferency.value,
-        },
+        [searchTerm]: preferency
       };
 
-      // Schreibe Daten in Firestore
-      await addDoc(userRef, data);
+      // Aktualisiere die User-Präferenzen im entsprechenden Sitzungsdokument
+      await setDoc(sessionDocRef, {
+        userPreferences: data
+      }, { merge: true });
 
-      // // Schreibe Daten in Firestore
-      // await addDoc(collection(db, 'default'), data);
-
-      console.log('Daten erfolgreich in Firestore geschrieben!', data);
+      console.log('Daten erfolgreich zu Firestore hinzugefügt oder aktualisiert', searchTerm, preferency);
     } catch (error) {
-      console.error('Fehler beim Schreiben in Firestore:', error);
+      console.error('Fehler beim Schreiben von Umfragedaten in Firestore:', error);
     }
   };
 
@@ -214,6 +278,7 @@ const fetchOntologyData = async (searchTerm) => {
     showPopup.value = false;
     fetchEmbeddingData(currentSearchTerm.value);
     fetchOntologyData(currentSearchTerm.value);
+    startSurvey();
   };
 
   // Überwache currentSearchTerm um immer neue Daten zu fetchen
@@ -247,6 +312,16 @@ const fetchOntologyData = async (searchTerm) => {
       <input v-model="currentSearchTerm" type="text" class="search-input" />
       <button @click="nextSearch" class="search-button">Next</button>
     </div>
+  </div>
+
+  <div>
+    <!-- Fortschrittsbalken-Container -->
+    <div class="progress-container">
+      <!-- Fortschrittsbalken -->
+      <div class="progress-bar" :style="{ width: progressBarWidth }"></div>
+    </div>
+    <!-- Fortschrittsinformation anzeigen -->
+    <p>{{ currentProgressIndex + 1 }} von {{ totalSearchTerms }} Bewertungen abgeschlossen</p>
   </div>
 
   <!-- Query Space -->
@@ -338,6 +413,17 @@ const fetchOntologyData = async (searchTerm) => {
     position: fixed;
     left: 50%;
     transform: translate(-50%);
+  }
+
+  /* Progress Bar */
+    .progress-container {
+    width: 100%;
+    background-color: #e0e0e0;
+  }
+
+  .progress-bar {
+    height: 20px;
+    background-color: #76b900;
   }
 
 
