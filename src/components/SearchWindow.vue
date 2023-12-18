@@ -1,8 +1,8 @@
 <script setup>
   import SearchBar from '@/components/SearchBar.vue'
   import QueryResult from '@/components/QueryResult.vue'
-  import {ref, watch, computed} from 'vue'
-  import { addDoc, collection, serverTimestamp, setDoc, doc } from 'firebase/firestore';
+  import {ref, watch, computed, onMounted} from 'vue'
+  import { addDoc, collection, serverTimestamp, setDoc, doc, onSnapshot } from 'firebase/firestore';
   import { db } from '@/firebase.js';
 
   const currentSessionRef = ref(null);
@@ -21,18 +21,10 @@
   const currentSearchSetIndex = ref(0);
   const currentSearchTerm = ref(searchQueries[currentSearchSetIndex.value][currentSearchIndex.value]);
  
-  //Progress Bar Stuff
-  const currentProgressIndex = ref(0);
-  const progressArray = ref(searchQueries.map(() => false));
-  const totalSearchTerms = ref(searchQueries[0].length * searchQueries.length)
-  const progressBarWidth = computed(() => {
-  const totalSearchTerms = searchQueries.length;
-  const completedTerms = progressArray.value.filter(Boolean).length;
-    return `${(100 * completedTerms / totalSearchTerms).toFixed(2)}%`;
-  });
-  const updateProgress = () => {
-    currentProgressIndex.value++;
-  };
+  const progress = computed(() => completedSearchTerms.value.size / (searchQueries.length * searchQueries[0].length));
+  const completedSearchTerms = ref(new Set());
+  const completedSearchTermsCount = computed(() => completedSearchTerms.value.size);
+  const isCurrentSearchTermCompleted = computed(() => completedSearchTerms.value.has(currentSearchTerm.value));
 
   const showPopup = ref(true);
   const userName = ref('');
@@ -65,13 +57,6 @@
     console.log("currentPreferency:", currentPreferency.value)
     writeSurveyDataToFirestore(currentSearchTerm.value, currentPreferency.value);
 
-    // Fortschrittsarray aktualisieren
-    progressArray.value[currentProgressIndex.value] = true;
-    
-    // Optionale Weiterverarbeitung...
-
-    // Fortschritt aktualisieren
-    updateProgress();
   };
 
   //API Calls Speichern in jeweilige Variable
@@ -191,9 +176,6 @@ const fetchOntologyData = async (searchTerm) => {
       // Wenn hasNextSearch false ist, sind wir am Ende und müssen eventuell einen speziellen Fall handhaben.
       // Dieses else könnte entfernt werden, wenn es nichts zu tun gibt, sobald alle Suchbegriffe durchlaufen wurden.
     }
-
-    //ACHTUNG
-    updateProgress();
   };
 
   const previousSearch = () => {
@@ -214,39 +196,6 @@ const fetchOntologyData = async (searchTerm) => {
     }
   };
 
-  // const writeSurveyDataToFirestore = async () => {
-  //   try {
-  //     // Erstelle eine Referenz zur 'sessions'-Sammlung
-  //     const sessionRef = collection(db, 'default');
-
-  //     // Füge ein neues Dokument mit automatisch generierter ID hinzu
-  //     const sessionDocRef = await addDoc(sessionRef, {
-  //       creator: userName.value,
-  //       createdAt: serverTimestamp(),
-  //     });
-
-  //     // Erstelle eine Referenz zur Nutzer-Subkollektion innerhalb des Session-Dokuments
-  //     const userRef = collection(sessionDocRef, userName);
-  //     console.log(currentSearchTerm.value)
-  //     // Daten, die in Firestore geschrieben werden sollen
-  //     const data = {
-  //       userPreferences: {
-  //         [currentSearchTerm.value]: currentPreferency.value,
-  //       },
-  //     };
-
-  //     // Schreibe Daten in Firestore
-  //     await addDoc(userRef, data);
-
-  //     // // Schreibe Daten in Firestore
-  //     // await addDoc(collection(db, 'default'), data);
-
-  //     console.log('Daten erfolgreich in Firestore geschrieben!', data);
-  //   } catch (error) {
-  //     console.error('Fehler beim Schreiben in Firestore:', error);
-  //   }
-  // };
-
   const writeSurveyDataToFirestore = async (searchTerm, preferency) => {
     if (!currentSessionRef.value) {
       console.error('Es gibt keine aktive Umfragesitzung.');
@@ -266,6 +215,9 @@ const fetchOntologyData = async (searchTerm) => {
         userPreferences: data
       }, { merge: true });
 
+      //Update Progress
+      completedSearchTerms.value.add(searchTerm);
+
       console.log('Daten erfolgreich zu Firestore hinzugefügt oder aktualisiert', searchTerm, preferency);
     } catch (error) {
       console.error('Fehler beim Schreiben von Umfragedaten in Firestore:', error);
@@ -279,6 +231,13 @@ const fetchOntologyData = async (searchTerm) => {
     fetchEmbeddingData(currentSearchTerm.value);
     fetchOntologyData(currentSearchTerm.value);
     startSurvey();
+  };
+
+  const onEnter = () => {
+    // Führe die gewünschte Logik nur aus, wenn der Benutzername gültig ist
+    if (userName.value.trim().length > 0) {
+      saveUserName();
+    }
   };
 
   // Überwache currentSearchTerm um immer neue Daten zu fetchen
@@ -296,48 +255,58 @@ const fetchOntologyData = async (searchTerm) => {
 </script>
 
 <template>
-  <!-- Popup-Fenster -->
-  <div v-if="showPopup" class="popup">
-    <div class="popup-content">
+  <div class="page">
+
+    <!-- Popup-Fenster -->
+    <div v-if="showPopup" class="popup-container">
       <p>Willkommen auf unserer Seite! Bitte gib deinen Namen ein:</p>
-      <input v-model.trim="userName" placeholder="Dein Name" class="popup-input" />
+      <input v-model.trim="userName" placeholder="Dein Name" class="popup-input" @keyup.enter="onEnter"/>
       <button @click="saveUserName" class="popup-button" :disabled="userName.trim().length === 0">Speichern</button>
     </div>
-  </div>
 
-  <!-- Header of the Page -->
-  <div v-if="!showPopup" class="header-container">
-    <div>
+    <!-- Header of the Page -->
+    <div v-if="!showPopup" class="header-container">
       <button @click="previousSearch" class="search-button">Previous</button>
       <input v-model="currentSearchTerm" type="text" class="search-input" />
-      <button @click="nextSearch" class="search-button">Next</button>
+      <button @click="nextSearch" class="search-button" :disabled="!isCurrentSearchTermCompleted">Next</button>
     </div>
-  </div>
 
-  <div>
     <!-- Fortschrittsbalken-Container -->
-    <div class="progress-container">
-      <!-- Fortschrittsbalken -->
-      <div class="progress-bar" :style="{ width: progressBarWidth }"></div>
+    <div v-if="!showPopup" class="progress-container">
+      <!-- Fortschrittsbalken 
+      <div class="progress-bar" :style="{ width: progressBarWidth }"></div>-->
+      <div class="progress-bar" :style="{ width: `${progress * 100}%` }"></div>
+      <p>{{ completedSearchTermsCount }} von {{ searchQueries.length * searchQueries[0].length }} Bewertungen abgeschlossen</p>
     </div>
-    <!-- Fortschrittsinformation anzeigen -->
-    <p>{{ currentProgressIndex + 1 }} von {{ totalSearchTerms }} Bewertungen abgeschlossen</p>
-  </div>
 
-  <!-- Query Space -->
-  <div v-if="!showPopup" class="results-container">
-    <div class="button-container">
-      <button  class="left-button" v-on:click="handlePreference('left')">The left one is better.</button>
-      <button  class="right-button" v-on:click="handlePreference('right')">The right one is better.</button>
+    <!-- Preferency-Buttons -->
+    <div v-if="!showPopup" class="button-container">
+      <button class="left-button" v-on:click="handlePreference('left')">The left one is better.</button>
+      <button class="right-button" v-on:click="handlePreference('right')">The right one is better.</button>
     </div>
-    <div class="query-container">
+
+    <!-- Query Space -->
+    <div v-if="!showPopup" class="query-container">
       <QueryResult class="results" :results="isEmbeddingFirst ? processedQueryResultsOntology : processedQueryResultsEmbedding"/>
       <QueryResult class="results" :results="isEmbeddingFirst ? processedQueryResultsEmbedding : processedQueryResultsOntology"/>
     </div>
+  
   </div>
 </template>
 
 <style scoped>
+  /* Page */
+  .page {
+    display: flex;
+    
+    justify-content: center; 
+    align-items: stretch; 
+    /* flex-flow: column nowrap; */ 
+    flex-direction: column; 
+    flex-wrap: nowrap; 
+    align-content: stretch;
+  }
+
   /* Popup-Fenster */
   .popup {
     position: fixed;
@@ -381,7 +350,7 @@ const fetchOntologyData = async (searchTerm) => {
     justify-content: space-evenly;
     align-items: center;
     padding: 10px;
-    background-color: #f0f0f0; /* Hintergrundfarbe für den Kopfbereich */
+    background-color: lightgray; /* Hintergrundfarbe für den Kopfbereich */
   }
 
   .search-input {
@@ -402,19 +371,6 @@ const fetchOntologyData = async (searchTerm) => {
     cursor: pointer;
   }
 
-  .search {
-    margin-top: 1%;
-    height: 46px;
-    border-radius: 48px;
-    border: 0.5px solid lightgrey;
-    width: 40%;
-    padding-right: 40px;
-    padding-left: 10px;
-    position: fixed;
-    left: 50%;
-    transform: translate(-50%);
-  }
-
   /* Progress Bar */
     .progress-container {
     width: 100%;
@@ -430,17 +386,18 @@ const fetchOntologyData = async (searchTerm) => {
   /* Result Container */
   .results-container {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: space-around; /* Ändere space-around zu space-between oder space-evenly, je nachdem, welchen Abstand du bevorzugst */
-  }
-
-  .results {
-    flex: 1 1 300px; /* Ändere die Breite der Karten nach Bedarf */
-    margin: 10px; /* Ändere den Abstand zwischen den Karten nach Bedarf */
-    margin-top: 3%;
+    flex-wrap: row;
+    justify-content: space-between; /* Ändere space-around zu space-between oder space-evenly, je nachdem, welchen Abstand du bevorzugst */
   }
 
   /* Preferency-Buttons */
+
+  .button-container {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center; /* Ändere space-around zu space-between oder space-evenly, je nachdem, welchen Abstand du bevorzugst */
+  }
+
   .left-button, .right-button {
     flex: 1;
     display: inline-block;
@@ -464,9 +421,9 @@ const fetchOntologyData = async (searchTerm) => {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); /* Schatten bei Hover */
   }
 
-  .queries-container {
-  display: flex;
-  
-  width: 50%; /* Ändere dies entsprechend deiner Anforderungen */
-}
+  .query-container {
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  }
 </style>
