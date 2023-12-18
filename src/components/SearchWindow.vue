@@ -400,7 +400,7 @@ const fetchOntologyData = async (searchTerm) => {
 
   .progress-bar {
     height: 20px;
-    background-color: #76b900;
+    background-color: #3498db;
   }
 
   /* Preferency-Buttons */

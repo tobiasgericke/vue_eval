@@ -35,5 +35,6 @@ const props = defineProps({
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Mindestbreite 200px, maximale Breite 1fr */
     grid-auto-rows: 400px;
     gap: 15px; /* Abstand zwischen den Karten */
+    max-width: 40%
   }
 </style>
