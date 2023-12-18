@@ -18,47 +18,27 @@
 
 <style scoped>
 
-.card {
-      width: 300px;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      overflow: hidden;
-      margin: 20px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
+  .card {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
 
-    /* Bildstil innerhalb der Karte */
-    .card img {
-      width: 100%;
-      height: auto;
-      display: block;
-    }
-
-    /* Bildunterschriftsstil innerhalb der Karte */
-    .card .caption {
-      padding: 15px;
-      text-align: center;
-      background-color: #f5f5f5;
-    }
-
-/* .card {
-    width:310px;
-    overflow: hidden;  
-    border: 2%;
-    box-shadow: 1px 1px 10px rgba(0, 0, 0, 0.1);
-    margin-bottom: 35px;
-    margin-right: 20px;
-}
-.card img {
+  /* Bildstil innerhalb der Karte */
+  .card img {
     width: 100%;
-    height: 190px;
-    margin: 0;
-}
-.card text {
-    padding: 0 5px;
-}
-.card .card-text h2 {
-    font-weight: bold;
-} */
+    height: auto;
+    display: block;
+  }
 
+  /* Bildunterschriftsstil innerhalb der Karte */
+  .card-title {
+    padding: 15px;
+    text-align: center;
+    background-color: #282822;
+    font-size: medium ;
+    text-align: center;
+  }
 </style>

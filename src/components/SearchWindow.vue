@@ -275,7 +275,7 @@ const fetchOntologyData = async (searchTerm) => {
     <div v-if="!showPopup" class="progress-container">
       <!-- Fortschrittsbalken 
       <div class="progress-bar" :style="{ width: progressBarWidth }"></div>-->
-      <div class="progress-bar" :style="{ width: `${progress * 100}%` }"></div>
+      <div class="progress-bar" :style="{ width: `${progress * 100}%` }" placeholder=""></div>
       <p>{{ completedSearchTermsCount }} von {{ searchQueries.length * searchQueries[0].length }} Bewertungen abgeschlossen</p>
     </div>
 
@@ -284,14 +284,15 @@ const fetchOntologyData = async (searchTerm) => {
       <button class="left-button" v-on:click="handlePreference('left')">The left one is better.</button>
       <button class="right-button" v-on:click="handlePreference('right')">The right one is better.</button>
     </div>
-
-    <!-- Query Space -->
-    <div v-if="!showPopup" class="query-container">
-      <QueryResult class="results" :results="isEmbeddingFirst ? processedQueryResultsOntology : processedQueryResultsEmbedding"/>
-      <QueryResult class="results" :results="isEmbeddingFirst ? processedQueryResultsEmbedding : processedQueryResultsOntology"/>
-    </div>
-  
   </div>
+
+  <!-- Query Space -->
+  <div v-if="!showPopup" class="query-container">
+    <QueryResult class="results" :results="isEmbeddingFirst ? processedQueryResultsOntology : processedQueryResultsEmbedding"/>
+    <div class="separator"></div>
+    <QueryResult class="results" :results="isEmbeddingFirst ? processedQueryResultsEmbedding : processedQueryResultsOntology"/>
+  </div>
+
 </template>
 
 <style scoped>
@@ -308,40 +309,59 @@ const fetchOntologyData = async (searchTerm) => {
   }
 
   /* Popup-Fenster */
-  .popup {
+  .popup-container {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.5);
+    background: #282828;
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-direction: column;
   }
 
   .popup-content {
-    background: rgb(31, 31, 31);
+    background: #282828;
     padding: 20px;
     border-radius: 8px;
     text-align: center;
+    color: #ffffff;
   }
 
   .popup-input {
     margin: 10px 0;
     height: 36px;
-    border-radius: 48px;
-    border: 0.5px solid lightgrey;
-    width: 60%;
+    border-radius: 5px; /* Kleinere Rundung, um dem Design des Buttons zu entsprechen */
+    border: 2px solid #282828;
+    width: 10%; /* Volle Breite des Elternelements */
     padding: 0 10px;
+    box-sizing: border-box; /* Berücksichtigt die Padding- und Border-Werte in der Gesamtbreite */
+    color: #000000;
+    text-align: center;
   }
 
-  .popup-button {
+  /* .popup-button {
     height: 36px;
     border-radius: 48px;
     border: 0.5px solid lightgrey;
     padding: 0 15px;
     cursor: pointer;
+  } */
+
+  .popup-button {
+    height: 36px;
+    border-radius: 5px;
+    border: 2px solid #282828;
+    padding: 10px 20px;
+    font-size: 16px;
+    text-align: center;
+    text-decoration: none;
+    color: #ffffff;
+    background-color: #282828;
+    cursor: pointer;
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s;
   }
 
   /* HEADER */
@@ -354,10 +374,11 @@ const fetchOntologyData = async (searchTerm) => {
   }
 
   .search-input {
+    text-align: center;
     margin: 0;
     height: 46px;
     border-radius: 48px;
-    border: 0.5px solid lightgrey;
+    border: 2px solid #3498db;
     width: 40%;
     padding-right: 40px;
     padding-left: 10px;
@@ -366,7 +387,7 @@ const fetchOntologyData = async (searchTerm) => {
   .search-button {
     height: 46px;
     border-radius: 48px;
-    border: 0.5px solid lightgrey;
+    border: 2px solid #3498db;
     padding: 0 15px;
     cursor: pointer;
   }
@@ -374,7 +395,7 @@ const fetchOntologyData = async (searchTerm) => {
   /* Progress Bar */
     .progress-container {
     width: 100%;
-    background-color: #e0e0e0;
+    background-color: #282828;
   }
 
   .progress-bar {
@@ -382,33 +403,23 @@ const fetchOntologyData = async (searchTerm) => {
     background-color: #76b900;
   }
 
-
-  /* Result Container */
-  .results-container {
-    display: flex;
-    flex-wrap: row;
-    justify-content: space-between; /* Ändere space-around zu space-between oder space-evenly, je nachdem, welchen Abstand du bevorzugst */
-  }
-
   /* Preferency-Buttons */
 
   .button-container {
     display: flex;
-    justify-content: space-evenly;
+    justify-content: space-around; ;
     align-items: center; /* Ändere space-around zu space-between oder space-evenly, je nachdem, welchen Abstand du bevorzugst */
   }
 
   .left-button, .right-button {
-    flex: 1;
-    display: inline-block;
     padding: 10px 20px;
     font-size: 16px;
     text-align: center;
     text-decoration: none;
     border: 2px solid #3498db; /* Farbe des Rahmens */
     border-radius: 5px;
-    color: #3498db; /* Textfarbe */
-    background-color: #fff; /* Hintergrundfarbe */
+    color: #ffffff; /* Textfarbe */
+    background-color: #282828; /* Hintergrundfarbe */
     cursor: pointer;
     transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s;
   }
@@ -421,9 +432,16 @@ const fetchOntologyData = async (searchTerm) => {
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); /* Schatten bei Hover */
   }
 
+  /* Result Container */
+    .separator {
+    width: 5px;
+    background-color: lightgrey; /* Ändern Sie dies in die gewünschte Farbe */
+  }
+
   .query-container {
-  flex: 1;
-  flex-direction: row;
-  align-items: center;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around; 
+    background-color: #282828;
   }
 </style>

@@ -21,15 +21,19 @@ const props = defineProps({
 
 <style scoped>
 
-.query-result-container{
+  /* .query-result-container {
+    display: flex;
+    justify-content: space-around; 
+    width: 100%;
+    align-items: top;
+    flex: 1 1 0;
+    flex-wrap: wrap;
+  } */
 
-    
-  justify-content: space-between; 
-  align-items: stretch; 
-  /* flex-flow: row wrap; */ 
-  flex-direction: row; 
-  flex-wrap: wrap; 
-  flex-grow: 1;
-  align-content: stretch;
-}
+  .query-result-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Mindestbreite 200px, maximale Breite 1fr */
+    grid-auto-rows: 400px;
+    gap: 15px; /* Abstand zwischen den Karten */
+  }
 </style>
