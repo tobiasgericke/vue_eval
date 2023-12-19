@@ -95,10 +95,10 @@
 const fetchOntologyData = async (searchTerm) => {
   try {
     const response = await fetch(
-      `https://ecom.sitesearch360.com/search?projectId=28` +
+      `https://ecom.sitesearch360.com/search?projectId=13364` +
       `&site=28&includeContent=true&limit=30&highlightQueryTerms=true` +
       `&includeContentGroups=%5B%22Produkte%22%5D&log=true&filterOptions=true` +
-      `&offset=0&catalogId=13705&ignoreMappings=true` +
+      `&offset=0&ignoreMappings=true` +
       `&sessionId=3c079d5d-10da-db67-7f40-606258fc2ccf&kvtable=false` +
       `&complexFilterFormat=true&query=${searchTerm}`
     );
