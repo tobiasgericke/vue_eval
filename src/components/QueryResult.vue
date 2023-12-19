@@ -33,7 +33,7 @@ const props = defineProps({
   .query-result-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); /* Mindestbreite 200px, maximale Breite 1fr */
-    grid-auto-rows: 400px;
+    grid-auto-rows: 340px;
     gap: 15px; /* Abstand zwischen den Karten */
     max-width: 40%
   }

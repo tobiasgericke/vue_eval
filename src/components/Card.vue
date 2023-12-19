@@ -19,26 +19,31 @@
 <style scoped>
 
   .card {
+    display: flex;
+    flex-direction: column;
     border: 1px solid #ccc;
     border-radius: 8px;
     overflow: hidden;
-    margin: 20px;
+    margin: 5px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   }
 
   /* Bildstil innerhalb der Karte */
   .card img {
+    flex: 0.5;
     width: 100%;
-    height: auto;
-    display: block;
+    object-fit: cover;
+    /* height: auto; */
+    /* display: block; */
   }
 
   /* Bildunterschriftsstil innerhalb der Karte */
   .card-title {
-    padding: 15px;
+    flex: 0.5;
+    padding: 10px;
     text-align: center;
     background-color: #282822;
-    font-size: medium ;
-    text-align: center;
+    font-size: 1rem ;
+    color: #fff;
   }
 </style>

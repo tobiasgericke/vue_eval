@@ -48,7 +48,10 @@
     // Hier fügst du die gedrückte Richtung für die aktuelle Query und das aktuelle Set zum Array hinzu
     console.log("handlePreference:", direction)
     console.log ("isEmbeddingFirst:", isEmbeddingFirst.value)
-    if ((isEmbeddingFirst.value && direction === "left") || (!isEmbeddingFirst.value && direction === "right")) {
+    if (direction === "middle"){
+      currentPreferency.value = "undecided";
+    }
+    else if ((isEmbeddingFirst.value && direction === "left") || (!isEmbeddingFirst.value && direction === "right")) {
       currentPreferency.value = "embedding";
     } else {
       currentPreferency.value = "ontology";
@@ -259,15 +262,22 @@ const fetchOntologyData = async (searchTerm) => {
 
     <!-- Popup-Fenster -->
     <div v-if="showPopup" class="popup-container">
-      <p>Willkommen auf unserer Seite! Bitte gib deinen Namen ein:</p>
-      <input v-model.trim="userName" placeholder="Dein Name" class="popup-input" @keyup.enter="onEnter"/>
-      <button @click="saveUserName" class="popup-button" :disabled="userName.trim().length === 0">Speichern</button>
+      <h2>Welcome to our survey!</h2>
+      <p>Thank you for participating!</p>
+      <p>Below, you will see two search results for a selected search term (on the left and right).</p>
+      <p>These searches use different search engines.</p>
+      <p>Your task is to determine which one works better.</p>
+      <p>So, please rate which search results you prefer for each search term!</p>
+      <p>Estimated duration: 30 minutes</p>
+      <p>Now, please enter your name:</p>
+      <input v-model.trim="userName" placeholder="your name here..." class="popup-input" @keyup.enter="onEnter"/>
+      <button @click="saveUserName" class="popup-button" :disabled="userName.trim().length === 0">Save</button>
     </div>
 
     <!-- Header of the Page -->
     <div v-if="!showPopup" class="header-container">
       <button @click="previousSearch" class="search-button">Previous</button>
-      <input v-model="currentSearchTerm" type="text" class="search-input" />
+      <textarea readonly v-model="currentSearchTerm" type="text" class="search-input" />
       <button @click="nextSearch" class="search-button" :disabled="!isCurrentSearchTermCompleted">Next</button>
     </div>
 
@@ -276,21 +286,22 @@ const fetchOntologyData = async (searchTerm) => {
       <!-- Fortschrittsbalken 
       <div class="progress-bar" :style="{ width: progressBarWidth }"></div>-->
       <div class="progress-bar" :style="{ width: `${progress * 100}%` }" placeholder=""></div>
-      <p>{{ completedSearchTermsCount }} von {{ searchQueries.length * searchQueries[0].length }} Bewertungen abgeschlossen</p>
+      <p class="progress-text">{{ completedSearchTermsCount }} of {{ searchQueries.length * searchQueries[0].length }} reviews completed.</p>
     </div>
 
     <!-- Preferency-Buttons -->
     <div v-if="!showPopup" class="button-container">
       <button class="left-button" v-on:click="handlePreference('left')">The left one is better.</button>
+      <button class="middle-button" v-on:click="handlePreference('middle')">I am undecided.</button>
       <button class="right-button" v-on:click="handlePreference('right')">The right one is better.</button>
     </div>
   </div>
 
   <!-- Query Space -->
   <div v-if="!showPopup" class="query-container">
-    <QueryResult class="results" :results="isEmbeddingFirst ? processedQueryResultsOntology : processedQueryResultsEmbedding"/>
+    <QueryResult class="left-results" :results="isEmbeddingFirst ? processedQueryResultsOntology : processedQueryResultsEmbedding"/>
     <div class="separator"></div>
-    <QueryResult class="results" :results="isEmbeddingFirst ? processedQueryResultsEmbedding : processedQueryResultsOntology"/>
+    <QueryResult class="right-results" :results="isEmbeddingFirst ? processedQueryResultsEmbedding : processedQueryResultsOntology"/>
   </div>
 
 </template>
@@ -320,6 +331,7 @@ const fetchOntologyData = async (searchTerm) => {
     justify-content: center;
     align-items: center;
     flex-direction: column;
+    color: #ffffff;
   }
 
   .popup-content {
@@ -342,19 +354,11 @@ const fetchOntologyData = async (searchTerm) => {
     text-align: center;
   }
 
-  /* .popup-button {
-    height: 36px;
-    border-radius: 48px;
-    border: 0.5px solid lightgrey;
-    padding: 0 15px;
-    cursor: pointer;
-  } */
-
   .popup-button {
     height: 36px;
     border-radius: 5px;
-    border: 2px solid #282828;
-    padding: 10px 20px;
+    border: 2px solid #3498db;
+    padding: 8px 20px;
     font-size: 16px;
     text-align: center;
     text-decoration: none;
@@ -362,6 +366,13 @@ const fetchOntologyData = async (searchTerm) => {
     background-color: #282828;
     cursor: pointer;
     transition: background-color 0.3s, color 0.3s, border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .popup-button:hover {
+    background-color: #3498db; /* Hintergrundfarbe bei Hover */
+    color: #fff; /* Textfarbe bei Hover */
+    border-color: #3498db; /* Rahmenfarbe bei Hover */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); /* Schatten bei Hover */
   }
 
   /* HEADER */
@@ -374,6 +385,9 @@ const fetchOntologyData = async (searchTerm) => {
   }
 
   .search-input {
+    padding: 10px 20px;
+    font-size: 16px;
+    text-decoration: none;
     text-align: center;
     margin: 0;
     height: 46px;
@@ -385,17 +399,32 @@ const fetchOntologyData = async (searchTerm) => {
   }
 
   .search-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    text-align: center;
+    text-decoration: none;
     height: 46px;
     border-radius: 48px;
     border: 2px solid #3498db;
-    padding: 0 15px;
     cursor: pointer;
   }
 
+  .search-button:hover {
+    background-color: #3498db; /* Hintergrundfarbe bei Hover */
+    color: #fff; /* Textfarbe bei Hover */
+    border-color: #3498db; /* Rahmenfarbe bei Hover */
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); /* Schatten bei Hover */
+  }
+
+  .search-button:active {
+    transform: scale(0.95); /* Verkleinere den Button beim Klicken */
+  }
+
   /* Progress Bar */
-    .progress-container {
+  .progress-container {
     width: 100%;
     background-color: #282828;
+    margin-bottom: 40px;
   }
 
   .progress-bar {
@@ -403,15 +432,21 @@ const fetchOntologyData = async (searchTerm) => {
     background-color: #3498db;
   }
 
+  .progress-text {
+    color: #ffffff;
+    text-align: center;
+  }
+
   /* Preferency-Buttons */
 
   .button-container {
     display: flex;
-    justify-content: space-around; ;
+    justify-content: space-evenly; ;
     align-items: center; /* Ändere space-around zu space-between oder space-evenly, je nachdem, welchen Abstand du bevorzugst */
+    margin-bottom: 20px;
   }
 
-  .left-button, .right-button {
+  .left-button, .right-button, .middle-button {
     padding: 10px 20px;
     font-size: 16px;
     text-align: center;
@@ -425,17 +460,23 @@ const fetchOntologyData = async (searchTerm) => {
   }
 
   /* Hover-Effekte für den Button */
-  .left-button:hover, .right-button:hover {
+  .left-button:hover, .right-button:hover, .middle-button:hover {
     background-color: #3498db; /* Hintergrundfarbe bei Hover */
     color: #fff; /* Textfarbe bei Hover */
     border-color: #3498db; /* Rahmenfarbe bei Hover */
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.2); /* Schatten bei Hover */
   }
 
+  .left-button:active, .right-button:active, .middle-button:active {
+    transform: scale(0.95); /* Verkleinere den Button beim Klicken */
+  }
+
   /* Result Container */
-    .separator {
+  .separator {
     width: 5px;
-    background-color: lightgrey; /* Ändern Sie dies in die gewünschte Farbe */
+    background-color: lightgrey;
+    
+    align-self: stretch; /* testwise */
   }
 
   .query-container {
