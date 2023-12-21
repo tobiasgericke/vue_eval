@@ -12,11 +12,42 @@
   const isEmbeddingFirst = ref(true);
   const currentPreferency  = ref('');
 
+  const isLoading = ref(false);
+  const isFinished = ref(false);
+  const closePopup = () => {
+    isFinished.value = false;
+  };
+
   const searchQueries = [
-    /* Häufigste Querys */["neumann_bundles", "eris-2nd-gen", "kawai digital pianos", "shure-wireless", "e25-elektron", "teenage engineering", "akai", "fender", "komplete-14" , "behringer"],
-    /* Zero-Result Querys */["chompi", "harley benton", "gehörschutz", "audeze", "nebel", "dsm", "gutschein", "micscreen", "xone k2" , "behringer swing"],
-    /* Randomized Querys */["ableton", "black lion audio", "sennheiser", "music box", "trumpet", "launchpad", "shure", "guitar stand", "tuner" , "amplifier"],
+    // /* 25 Popular Querys */
+    [ "keys_sale", "neumann_bundles", "fender", "shure-wireless", "gibson",
+      "genelec", "midi", "ukulele", "artiphon", "interface",
+      "acoustic guitar" , "könig", "syntakt", "sennheiser", "teenage engineering",
+      "yamaha clp-745", "roland", "cable", "headphones", "microphone",
+      "korg", "native instruments", "wireless", "podcasting", "amplifier"],
+
+    // /* 25 Zero-Result Querys (popular) */
+    [ "basedrum fell", "otamatone", "fadermaster", "tin wistle", "loopstation",
+      "lumikey", "drumport", "unitune", "jamhub" , "cloud lifter",
+      "tendrils", "krk rokit", "personus sub", "dmx clotz", "bluesky",
+      "audeze", "artifon", "walrus canvas", "kanto", "millenium",
+      "ukelele", "ramen", "squire", "stimm amp", "polk"],
+
+    // /* 25 Long Querys */
+    [ "neumann_u87_studioset", "eris-2nd-gen", "kawai digital pianos", "lewitt lct 240 pro", "needle replacement ortofon",
+      "fender player strato", "26inch bass drum", "meinl classics custom dark  crash", "electro harmonix pedal", "microphone shock mount",
+      "paiste 2002 splash 12", "digital piano 88", "eurorack modular cable", "fender jazz bass", "pair of active speakers",
+      "elektron analog four mkii", "nektar impact lx61 usb-midi-controller-keyboard with daw-integration", "5 string bass guitar ibanez", "electric guitar strings", "professional nux pdi-1g guitar direct injection phantom power box audio mixer para out compact design metal housing",
+      "adapter microphone 3/8 to 5/8", "gibson toggle cap black", "korg volca beats drum machine", "universal audio volt 2", "studio speaker stands"],
+
+    // /* 25 Randomized Querys */
+    [ "zoom", "rack roll", "hanson", "mesa", "microfreak vocoder",
+      "family guy", "snake", "guitar effect", "traktor" , "reverb pedal",
+      "mac book", "harmony", "scarlett", "cable hanger", "funkmikrophone",
+      "subkick", "case", "steven slate platinum edition headphones", "limiter", "headphone adapter",
+      "dust cover", "led tube", "magma", "earplugs", "kurt cobain"],
   ];
+
   const currentSearchIndex = ref(0);
   const currentSearchSetIndex = ref(0);
   const currentSearchTerm = ref(searchQueries[currentSearchSetIndex.value][currentSearchIndex.value]);
@@ -71,6 +102,7 @@
     //   `&site=13364&limit=30&filterOptions=true` +
     //   `&offset=0&complexFilterFormat=true&query=${searchTerm}`
     // );
+    isLoading.value = true;
 
     const response = await fetch(
       `https://dev-api-v3.semknox.com/search-vector?projectId=32979&internal=true&log=false&query=${searchTerm}`
@@ -94,6 +126,7 @@
 // Funktion für Ontology Fetch
 const fetchOntologyData = async (searchTerm) => {
   try {
+    isLoading.value = true;
     const response = await fetch(
       `https://ecom.sitesearch360.com/search?projectId=13364` +
       `&site=28&includeContent=true&limit=30&highlightQueryTerms=true` +
@@ -111,7 +144,7 @@ const fetchOntologyData = async (searchTerm) => {
     console.log("Ontology Fetch erfolgreich")
     //Trigger for processing
     queryResultsOntology.value = await response.json();
-
+    //start here processing of the processedQueryResultsOntology
   } catch (error) {
     console.error('Fehler beim Abrufen der Ontology-Daten:', error);
     return null;
@@ -161,6 +194,9 @@ const fetchOntologyData = async (searchTerm) => {
 
 
   const nextSearch = () => {
+
+    queryResultsEmbedding.value = [];
+    queryResultsOntology.value = [];
     // Ermitteln, ob es einen nächsten Suchbegriff gibt
     const hasNextSearch = currentSearchIndex.value < searchQueries[0].length - 1 || currentSearchSetIndex.value < searchQueries.length - 1;
 
@@ -178,10 +214,14 @@ const fetchOntologyData = async (searchTerm) => {
     } else {
       // Wenn hasNextSearch false ist, sind wir am Ende und müssen eventuell einen speziellen Fall handhaben.
       // Dieses else könnte entfernt werden, wenn es nichts zu tun gibt, sobald alle Suchbegriffe durchlaufen wurden.
+      isFinished.value = true;
+      console.log("isFinished:", isFinished.value)
     }
   };
 
   const previousSearch = () => {
+    queryResultsEmbedding.value = [];
+    queryResultsOntology.value = [];
     // Ermitteln, ob es einen vorherigen Suchbegriff gibt
     const hasPreviousSearch = currentSearchSetIndex.value > 0 || currentSearchIndex.value > 0;
 
@@ -255,6 +295,17 @@ const fetchOntologyData = async (searchTerm) => {
   watch(currentPreferency, () => {
     console.log("currentPreferency updated:", currentPreferency.value)
   });
+
+  watch(processedQueryResultsEmbedding, () => {
+    isLoading.value = false;
+    console.log("isLoading:", isLoading.value)
+  });
+
+  watch(processedQueryResultsOntology, () => {
+      isLoading.value = false;
+      console.log("isLoading:", isLoading.value)
+  });
+
 </script>
 
 <template>
@@ -267,11 +318,20 @@ const fetchOntologyData = async (searchTerm) => {
       <p>Below, you will see two search results for a selected search term (on the left and right).</p>
       <p>These searches use different search engines.</p>
       <p>Your task is to determine which one works better.</p>
+      <p>Sometimes an empty result can be better than a wrong one.</p>
       <p>So, please rate which search results you prefer for each search term!</p>
-      <p>Estimated duration: 30 minutes</p>
+      <p>Estimated duration: 20 minutes</p>
       <p>Now, please enter your name:</p>
       <input v-model.trim="userName" placeholder="your name here..." class="popup-input" @keyup.enter="onEnter"/>
       <button @click="saveUserName" class="popup-button" :disabled="userName.trim().length === 0">Save</button>
+      <p>____</p>
+      <p>Note: This survey is conducted with Just Music (Gb), an online shop for music accessories.</p>
+    </div>
+
+    <div v-if="isFinished" class="popup-container-finished">
+      <h2>You finished!</h2>
+      <p>Thank you for participating!</p>
+      <button @click="closePopup" class="popup-close-button">X</button>
     </div>
 
     <!-- Header of the Page -->
@@ -299,9 +359,13 @@ const fetchOntologyData = async (searchTerm) => {
 
   <!-- Query Space -->
   <div v-if="!showPopup" class="query-container">
-    <QueryResult class="left-results" :results="isEmbeddingFirst ? processedQueryResultsOntology : processedQueryResultsEmbedding"/>
+    <div v-if="isLoading">Loading...</div>
+    <QueryResult v-if="!isLoading" class="results" :results="isEmbeddingFirst ? processedQueryResultsEmbedding : processedQueryResultsOntology"/>
+
     <div class="separator"></div>
-    <QueryResult class="right-results" :results="isEmbeddingFirst ? processedQueryResultsEmbedding : processedQueryResultsOntology"/>
+
+    <div v-if="isLoading">Loading...</div>
+    <QueryResult v-if="!isLoading" class="results" :results="isEmbeddingFirst ? processedQueryResultsOntology : processedQueryResultsEmbedding"/>
   </div>
 
 </template>
@@ -484,5 +548,32 @@ const fetchOntologyData = async (searchTerm) => {
     flex-direction: row;
     justify-content: space-around; 
     background-color: #282828;
+  }
+
+
+  /* Finish Popup Container */
+  .popup-container-finished {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    color: #ffffff;
+    padding: 20px;
+  }
+
+  .popup-close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
   }
 </style>

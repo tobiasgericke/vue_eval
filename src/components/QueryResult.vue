@@ -2,7 +2,7 @@
   <div class="query-result-container">
     <Card
       v-for="product in results"
-      :key="product.name"
+      :key="product.id"
       :name="product.name"
       :image="product.image"
     />
