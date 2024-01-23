@@ -337,7 +337,7 @@ const fetchOntologyData = async (searchTerm) => {
     <!-- Header of the Page -->
     <div v-if="!showPopup" class="header-container">
       <button @click="previousSearch" class="search-button">Previous</button>
-      <textarea readonly v-model="currentSearchTerm" type="text" class="search-input" />
+      <input readonly v-model="currentSearchTerm" type="text" class="search-input" />
       <button @click="nextSearch" class="search-button" :disabled="!isCurrentSearchTermCompleted">Next</button>
     </div>
 
